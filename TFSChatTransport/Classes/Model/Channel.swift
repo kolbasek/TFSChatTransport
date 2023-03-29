@@ -8,9 +8,9 @@
 import Foundation
 
 public struct Channel: Codable {
-    let id: String
-    let name: String
-    let logoURL: String?
-    let lastMessage: String?
-    let lastActivity: Date?
+    public let id: String
+    public let name: String
+    public let logoURL: String?
+    public let lastMessage: String?
+    public let lastActivity: Date?
 }

@@ -8,7 +8,7 @@
 import Foundation
 
 public struct Message: Codable {
-    let text: String
-    let userID: String
-    let date: Date
+    public let text: String
+    public let userID: String
+    public let date: Date
 }
