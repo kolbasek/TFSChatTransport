@@ -10,23 +10,27 @@ import Combine
 
 public class ChatService {
     
-    private let baseUrl: String
+    private let host: String
     private let port: Int
     private let urlSession: URLSession
     
-    public init(baseUrl: String, port: Int, urlSession: URLSession = URLSession.shared) {
-        self.baseUrl = baseUrl
+    public init(host: String, port: Int, urlSession: URLSession = URLSession.shared) {
+        self.host = host
         self.port = port
         self.urlSession = urlSession
     }
     
     // MARK: - Channels
-    
+
+    /// Создает новый канал и возвращает его модель
+    /// - Parameters:
+    ///     - name: Имя отправителя
+    ///     - logoUrl: Ссылка на логотип
     public func createChannel(name: String, logoUrl: String? = nil) -> AnyPublisher<Channel, Error> {
         let session = self.urlSession
         var object: [String: Codable] = [:]
         object["name"] = name
-        object["logoUrl"] = logoUrl
+        object["logoURL"] = logoUrl
         let decoder = makeJSONDecoder()
         return makePostRequest(path: "/channels", bodyObject: object)
             .flatMap { session.dataTaskPublisher(for: $0).mapError { $0 as Error } }
@@ -35,7 +39,8 @@ public class ChatService {
             .decode(type: Channel.self, decoder: decoder)
             .eraseToAnyPublisher()
     }
-    
+
+    /// Загружает все каналы
     public func loadChannels() -> AnyPublisher<[Channel], Error> {
         let session = self.urlSession
         let decoder = makeJSONDecoder()
@@ -46,7 +51,9 @@ public class ChatService {
             .decode(type: [Channel].self, decoder: decoder)
             .eraseToAnyPublisher()
     }
-    
+
+    /// Загружает информацию о канале
+    /// - Parameter id: id канала
     public func loadChannel(id: String) -> AnyPublisher<Channel, Error> {
         let session = self.urlSession
         let decoder = makeJSONDecoder()
@@ -57,7 +64,10 @@ public class ChatService {
             .decode(type: Channel.self, decoder: decoder)
             .eraseToAnyPublisher()
     }
-    
+
+    /// Удаляет канал
+    /// - Parameters:
+    ///     - id: id канала
     public func deleteChannel(id: String) -> AnyPublisher<Void, Error> {
         let session = self.urlSession
         return makeDeleteRequest(path: "/channels/\(id)")
@@ -68,7 +78,10 @@ public class ChatService {
     }
     
     // MARK: - Messages
-    
+
+    /// Загружает сообщения из канала
+    /// - Parameters:
+    ///     - channelId: id канала
     public func loadMessages(channelId: String) -> AnyPublisher<[Message], Error> {
         let session = self.urlSession
         let decoder = makeJSONDecoder()
@@ -79,11 +92,17 @@ public class ChatService {
             .decode(type: [Message].self, decoder: decoder)
             .eraseToAnyPublisher()
     }
-    
-    public func sendMessage(text: String, channelId: String, userId: String) -> AnyPublisher<Message, Error> {
+
+    /// Создает новое сообщение и возвращает его модель
+    /// - Parameters:
+    ///     - text: текст сообщения
+    ///     - channelId: id канала
+    ///     - userId: id отправителя
+    ///     - userName: имя отправителя
+    public func sendMessage(text: String, channelId: String, userId: String, userName: String) -> AnyPublisher<Message, Error> {
         let session = self.urlSession
         let decoder = makeJSONDecoder()
-        return makePostRequest(path: "/channels/\(channelId)/messages", bodyObject: ["userID": userId, "text": text])
+        return makePostRequest(path: "/channels/\(channelId)/messages", bodyObject: ["userID": userId, "userName": userName, "text": text])
             .flatMap { session.dataTaskPublisher(for: $0).mapError { $0 as Error } }
             .tryMap { try ChatService.handleStatusCode($0) }
             .map(\.data)
@@ -99,7 +118,7 @@ private extension ChatService {
     private func makeUrl(path: String) -> AnyPublisher<URL, Error> {
         var urlComponents = URLComponents()
         urlComponents.scheme = "http"
-        urlComponents.host = baseUrl
+        urlComponents.host = host
         urlComponents.path = path
         urlComponents.port = port
         
