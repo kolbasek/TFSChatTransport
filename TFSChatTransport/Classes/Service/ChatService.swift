@@ -126,7 +126,7 @@ private extension ChatService {
             let errorMessage = "Could not construct url with components: \(urlComponents)"
             return Fail(error: NSError(domain: "ChatServiceError",
                                        code: -1,
-                                      userInfo: [NSLocalizedFailureReasonErrorKey : errorMessage]))
+                                      userInfo: [NSLocalizedFailureReasonErrorKey: errorMessage]))
             .eraseToAnyPublisher()
         }
         
