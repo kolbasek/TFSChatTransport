@@ -8,6 +8,7 @@
 import Foundation
 
 public struct Message: Codable {
+    public let id: String
     public let text: String
     public let userID: String
     public let userName: String
