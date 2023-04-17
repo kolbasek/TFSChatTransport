@@ -8,6 +8,12 @@
 import Foundation
 
 public struct SSEEvent: Decodable {
-    let eventType: String
+    let eventType: EventType
     let resourceID: String
+}
+
+public enum EventType: String, Decodable {
+    case add
+    case update
+    case delete
 }
