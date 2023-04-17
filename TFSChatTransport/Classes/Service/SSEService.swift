@@ -10,18 +10,15 @@ import Foundation
 
 public class SSEService: NSObject {
     
-    private var channelPublisher: PassthroughSubject<ChannelEvent, Error> = .init()
-    private var messagePublisher: PassthroughSubject<MessageEvent, Error> = .init()
-    
-    private var identifiers: [Int: TaskType] = [:]
+    private var publisher: PassthroughSubject<SSEEvent, Error> = .init()
     
     private var urlSession: URLSession!
     
-    private let baseUrl: String
+    private let host: String
     private let port: Int
     
-    init(baseUrl: String, port: Int) {
-        self.baseUrl = baseUrl
+    init(host: String, port: Int) {
+        self.host = host
         self.port = port
         
         super.init()
@@ -33,37 +30,21 @@ public class SSEService: NSObject {
         )
     }
     
-    func subscribeOnChannelsEvens() throws -> AnyPublisher<ChannelEvent, Error> {
+    func subscribeOnEvents() throws -> AnyPublisher<SSEEvent, Error> {
         guard let request = request(with: "/channels/events") else {
             throw TFSError.makeRequest
         }
         
-        sendRequest(request, with: .channel)
+        urlSession.dataTask(with: request).resume()
         
-        return channelPublisher
+        return publisher
             .eraseToAnyPublisher()
-    }
-    
-    func subscribeOnChannelEvens(channelId: String) throws -> AnyPublisher<MessageEvent, Error> {
-        guard let request = request(with: "/channels/\(channelId)/events") else {
-            throw TFSError.makeRequest
-        }
-        
-        sendRequest(request, with: .message)
-        
-        return messagePublisher
-            .eraseToAnyPublisher()
-    }
-    
-    private func sendRequest(_ request: URLRequest, with taskType: TaskType) {
-        let task = urlSession.dataTask(with: request)
-        identifiers[task.taskIdentifier] = taskType
-        task.resume()
     }
 }
 
 extension SSEService: URLSessionDelegate, URLSessionDataDelegate {
     public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        print(data)
         let string = String(data: data, encoding: .utf8)?
             .replacingOccurrences(of: "data:", with: "")
         
@@ -71,26 +52,19 @@ extension SSEService: URLSessionDelegate, URLSessionDataDelegate {
             return
         }
         
-        if let object = try? JSONDecoder().decode(ChannelEvent.self, from: data) {
-            channelPublisher.send(object)
-        } else if let object = try? JSONDecoder().decode(MessageEvent.self, from: data) {
-            messagePublisher.send(object)
-        }
-    }
-    
-    public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        guard let type = identifiers[task.taskIdentifier] else {
+        guard let object = try? JSONDecoder().decode(SSEEvent.self, from: data) else {
             return
         }
         
-        let err = error ?? TFSError.other
-        
-        switch type {
-        case .channel:
-            channelPublisher.send(completion: .failure(err))
-        case .message:
-            messagePublisher.send(completion: .failure(err))
+        publisher.send(object)
+    }
+    
+    public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        guard let error = error else {
+            return
         }
+        
+        publisher.send(completion: .failure(error))
     }
 }
 
@@ -98,9 +72,9 @@ private extension SSEService {
     private func request(with path: String) -> URLRequest? {
         var urlComponents = URLComponents()
         urlComponents.scheme = "http"
-        urlComponents.host = baseUrl
-        urlComponents.path = path
+        urlComponents.host = host
         urlComponents.port = port
+        urlComponents.path = path
         
         guard let url = urlComponents.url else {
             return nil
@@ -108,9 +82,4 @@ private extension SSEService {
         
         return URLRequest(url: url)
     }
-}
-
-private enum TaskType {
-    case channel
-    case message
 }
