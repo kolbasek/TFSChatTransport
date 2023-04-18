@@ -10,14 +10,14 @@ import Foundation
 
 public class SSEService: NSObject {
     
-    private var publisher: PassthroughSubject<SSEEvent, Error> = .init()
+    private var publisher: PassthroughSubject<ChatEvent, Error> = .init()
     
     private var urlSession: URLSession!
     
     private let host: String
     private let port: Int
     
-    init(host: String, port: Int) {
+    public init(host: String, port: Int) {
         self.host = host
         self.port = port
         
@@ -30,7 +30,7 @@ public class SSEService: NSObject {
         )
     }
     
-    func subscribeOnEvents() throws -> AnyPublisher<SSEEvent, Error> {
+    public func subscribeOnEvents() throws -> AnyPublisher<ChatEvent, Error> {
         guard let request = request(with: "/channels/events") else {
             throw TFSError.makeRequest
         }
@@ -44,15 +44,13 @@ public class SSEService: NSObject {
 
 extension SSEService: URLSessionDelegate, URLSessionDataDelegate {
     public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-        print(data)
         let string = String(data: data, encoding: .utf8)?
             .replacingOccurrences(of: "data:", with: "")
         
-        guard let data = string?.data(using: .utf8) else {
-            return
-        }
-        
-        guard let object = try? JSONDecoder().decode(SSEEvent.self, from: data) else {
+        guard
+            let data = string?.data(using: .utf8),
+            let object = try? JSONDecoder().decode(ChatEvent.self, from: data)
+        else {
             return
         }
         
