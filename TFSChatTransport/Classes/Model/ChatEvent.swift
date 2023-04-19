@@ -10,10 +10,10 @@ import Foundation
 public struct ChatEvent: Decodable {
     public let eventType: EventType
     public let resourceID: String
-}
-
-public enum EventType: String, Decodable {
-    case add
-    case update
-    case delete
+    
+    public enum EventType: String, Decodable {
+        case add
+        case update
+        case delete
+    }
 }
