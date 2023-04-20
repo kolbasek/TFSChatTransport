@@ -29,16 +29,27 @@ public class SSEService: NSObject {
             delegateQueue: nil
         )
     }
-    
-    public func subscribeOnEvents() throws -> AnyPublisher<ChatEvent, Error> {
+
+    /// Создает подписку на события о изменениях в списке каналов
+    public func subscribeOnEvents() -> AnyPublisher<ChatEvent, Error> {
         guard let request = request(with: "/channels/events") else {
-            throw TFSError.makeRequest
+            return Fail(error: NSError(domain: "SSEService",
+                                code: -1,
+                                userInfo: [NSLocalizedFailureReasonErrorKey: "Could not construct url with components"]))
+                    .eraseToAnyPublisher()
         }
         
         urlSession.dataTask(with: request).resume()
-        
+
         return publisher
             .eraseToAnyPublisher()
+    }
+
+    /// Останавливает прием событий и разрывает цикл сильных ссылок в URLSession
+    /// ВАЖНО! Необходимо вызывать перед удалением последней сильной ссылки на сервис
+    public func cancelSubscription() {
+        publisher.send(completion: .finished)
+        urlSession.invalidateAndCancel()
     }
 }
 
